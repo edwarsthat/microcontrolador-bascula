@@ -1,0 +1,29 @@
+# --- Rust / Cargo ---
+/target
+/Cargo.lock
+
+# --- Build de ESP-IDF (esp-idf-sys / embuild) ---
+# .embuild contiene el ESP-IDF y las toolchains descargadas: son cientos de MB
+/.embuild
+/build
+/managed_components
+/dependencies.lock
+
+# sdkconfig.defaults SÍ se versiona; estos los genera menuconfig
+/sdkconfig
+/sdkconfig.old
+/sdkconfig.ci
+
+# --- Secretos ---
+# Credenciales WiFi y demás: nunca al repositorio
+/cfg.toml
+.env
+.env.*
+!.env.example
+
+# --- Editores / SO ---
+/.vscode
+/.idea
+*.swp
+*~
+.DS_Store
