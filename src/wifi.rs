@@ -42,8 +42,8 @@ impl std::error::Error for WifiError {
     }
 }
 
-const SSID: &str = env!("WIFI_SSID");
-const PASSWORD: &str = env!("WIFI_PASSWORD");
+const SSID: &str = include_str!(concat!(env!("OUT_DIR"), "/WIFI_SSID"));
+const PASSWORD: &str = include_str!(concat!(env!("OUT_DIR"), "/WIFI_PASSWORD"));
 
 /// Espera del primer reintento; se duplica en cada fallo hasta `ESPERA_MAX`.
 const ESPERA_INICIAL: Duration = Duration::from_secs(1);
@@ -113,6 +113,22 @@ pub fn connect_with_retry(
 
     wifi.start().map_err(WifiError::ConnectionFailed)?;
     log::info!("WiFi iniciado, conectando a '{}'...", SSID);
+
+    match wifi.scan() {
+        Ok(aps) => {
+            log::info!("--- {} APs encontrados ---", aps.len());
+            for ap in aps {
+                log::info!(
+                    "SSID={:?} ch={} rssi={} auth={:?}",
+                    ap.ssid,
+                    ap.channel,
+                    ap.signal_strength,
+                    ap.auth_method
+                );
+            }
+        }
+        Err(e) => log::error!("Scan fallido: {:?}", e),
+    }
 
     let mut intento: u32 = 0;
     let mut espera = ESPERA_INICIAL;
