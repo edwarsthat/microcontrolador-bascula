@@ -1,5 +1,5 @@
-use esp_idf_svc::sys::EspError;
 use esp_idf_svc::nvs::{EspDefaultNvsPartition, EspNvs, NvsDefault};
+use esp_idf_svc::sys::EspError;
 
 const NS: &str = "bascula";
 const KEY_ARRANQUES: &str = "arranques";

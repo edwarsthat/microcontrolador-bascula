@@ -5,9 +5,14 @@ use esp_idf_svc::wifi::WifiDeviceId;
 use std::time::Duration;
 
 mod estado;
+mod hardware;
 mod http;
 mod mensajes;
+mod ui;
 mod wifi;
+
+use hardware::{bus_i2c::BusI2c, pantalla::Pantalla};
+use ui::arranque::{Arranque, Estado};
 
 fn main() {
     // It is necessary to call this function once. Otherwise, some patches to the runtime
@@ -20,13 +25,42 @@ fn main() {
     let sysloop = EspSystemEventLoop::take().expect("Fallo al obtener el sistema de eventos");
     let nvs = EspDefaultNvsPartition::take().expect("Fallo al obtener la particion NVS");
 
+    // Antes del WiFi: `peripherals.modem` se mueve al conectar.
+    let mut pantalla = match BusI2c::new(
+        peripherals.i2c0,
+        peripherals.pins.gpio21,
+        peripherals.pins.gpio22,
+    ) {
+        Ok(mut bus) => {
+            bus.escanear();
+            Pantalla::new(Some(bus.into_driver()))
+        }
+        Err(e) => {
+            log::error!("I2C0 no inicializo: {e}. Se continua sin bus I2C");
+            Pantalla::new(None)
+        }
+    };
+
+    let mut arranque = Arranque {
+        wifi: Estado::EnCurso,
+        ..Default::default()
+    };
+    arranque.mostrar(&mut pantalla);
+
     let mut wifi = match wifi::connect_with_retry(peripherals.modem, sysloop, nvs.clone()) {
         Ok(w) => w,
         Err(err) => {
             log::error!("No se pudo establecer conexion WiFi: {:?}", err);
+            arranque.wifi = Estado::Fallo;
+            arranque.mostrar(&mut pantalla);
+            std::thread::sleep(Duration::from_secs(3));
             unsafe { esp_idf_svc::sys::esp_restart() };
         }
     };
+
+    arranque.wifi = Estado::Ok;
+    arranque.servidor = Estado::EnCurso;
+    arranque.mostrar(&mut pantalla);
 
     let mut cliente = match http::ClienteServidor::new() {
         Ok(c) => c,
@@ -49,10 +83,23 @@ fn main() {
         version_firmware: env!("CARGO_PKG_VERSION"),
     };
     let body = serde_json::to_string(&msg).expect("serializar arranque");
-    match cliente.post_json(http::RUTA_ARRANQUE, &body) {
-        Ok(status) => log::info!("Arranque reportado ({})", status),
-        Err(e) => log::error!("No se pudo reportar el arranque: {}", e),
-    }
+    arranque.servidor = match cliente.post_json(http::RUTA_ARRANQUE, &body) {
+        Ok(status) => {
+            log::info!("Arranque reportado ({})", status);
+            Estado::Ok
+        }
+        Err(e) => {
+            log::error!("No se pudo reportar el arranque: {}", e);
+            Estado::Fallo
+        }
+    };
+    arranque.mostrar(&mut pantalla);
+    std::thread::sleep(Duration::from_secs(2)); // que el resultado se alcance a leer
+    ui::listo::mostrar(
+        &mut pantalla,
+        &msg.device_id,
+        arranque.servidor == Estado::Ok,
+    );
 
     loop {
         std::thread::sleep(Duration::from_secs(1));
