@@ -42,9 +42,32 @@ fn main() {
     };
 
     let mut arranque = Arranque {
-        wifi: Estado::EnCurso,
+        nfc: Estado::EnCurso,
         ..Default::default()
     };
+    arranque.mostrar(&mut pantalla);
+
+    let bus_spi = match hardware::bus_spi::BusSpi::new(
+        peripherals.spi3,
+        peripherals.pins.gpio18,
+        peripherals.pins.gpio23,
+        peripherals.pins.gpio19,
+        peripherals.pins.gpio5,
+    ) {
+        Ok(bus) => Some(bus.into_device()),
+        Err(e) => {
+            log::error!("SPI3 no inicializo: {e}");
+            None
+        }
+    };
+    let mut lector = hardware::lector_nfc::LectorNfc::new(bus_spi, peripherals.pins.gpio27);
+
+    arranque.nfc = if lector.disponible() {
+        Estado::Ok
+    } else {
+        Estado::Fallo
+    };
+    arranque.wifi = Estado::EnCurso;
     arranque.mostrar(&mut pantalla);
 
     let mut wifi = match wifi::connect_with_retry(peripherals.modem, sysloop, nvs.clone()) {

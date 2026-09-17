@@ -24,6 +24,7 @@ impl Estado {
 /// Progreso del arranque. `main` lo actualiza paso a paso y llama a `mostrar`.
 #[derive(Clone, Copy, Default)]
 pub struct Arranque {
+    pub nfc: Estado,
     pub wifi: Estado,
     pub servidor: Estado,
 }
@@ -37,9 +38,10 @@ impl Arranque {
     ///   Servidor    ...
     pub fn mostrar(&self, pantalla: &mut Pantalla) {
         let [titulo, separador] = super::cabecera();
+        let nfc = format!("Lector NFC  {}", self.nfc.texto());
         let wifi = format!("WiFi        {}", self.wifi.texto());
         let servidor = format!("Servidor    {}", self.servidor.texto());
 
-        pantalla.texto(&[&titulo, &separador, &wifi, &servidor]);
+        pantalla.texto(&[&titulo, &separador, &nfc, &wifi, &servidor]);
     }
 }

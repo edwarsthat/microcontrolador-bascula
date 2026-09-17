@@ -1,4 +1,0 @@
-WIFI_SSID="red_bascula"
-WIFI_PASSWORD="806B3D36CAAB7112E6F919D345101C72"
-SERVER_URL_DEV="http://192.168.50.1:3010/dispositivos/arranque/"
-SERVER_URL_PROD="https://tu-servidor.com/sp32/"
