@@ -1,3 +1,4 @@
+use crate::config::{WIFI_PASSWORD, WIFI_SSID};
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
     hal::modem::WifiModemPeripheral,
@@ -5,6 +6,8 @@ use esp_idf_svc::{
     wifi::{AuthMethod, BlockingWifi, ClientConfiguration, Configuration, EspWifi},
 };
 use std::time::Duration;
+
+pub type Wifi = BlockingWifi<EspWifi<'static>>;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -42,9 +45,6 @@ impl std::error::Error for WifiError {
     }
 }
 
-const SSID: &str = include_str!(concat!(env!("OUT_DIR"), "/WIFI_SSID"));
-const PASSWORD: &str = include_str!(concat!(env!("OUT_DIR"), "/WIFI_PASSWORD"));
-
 /// Espera del primer reintento; se duplica en cada fallo hasta `ESPERA_MAX`.
 const ESPERA_INICIAL: Duration = Duration::from_secs(1);
 const ESPERA_MAX: Duration = Duration::from_secs(60);
@@ -55,17 +55,15 @@ const INTENTOS_POR_REINICIO: u32 = 10;
 /// Reintentos suaves de `reconectar` antes de escalar a reiniciar el driver.
 const INTENTOS_RECONEXION: u32 = 3;
 
-type Wifi = BlockingWifi<EspWifi<'static>>;
-
 /// Carga el SSID/password en el driver. Se vuelve a llamar tras cada reinicio
 /// del driver para no depender de que la configuración sobreviva al `stop()`.
 fn configurar(wifi: &mut Wifi) -> Result<(), WifiError> {
     wifi.set_configuration(&Configuration::Client(ClientConfiguration {
-        ssid: SSID.try_into().map_err(|_| {
+        ssid: WIFI_SSID.try_into().map_err(|_| {
             log::error!("SSID inválido (máximo 32 caracteres)");
             WifiError::CredencialesInvalidas("SSID")
         })?,
-        password: PASSWORD.try_into().map_err(|_| {
+        password: WIFI_PASSWORD.try_into().map_err(|_| {
             log::error!("Password inválido (máximo 64 caracteres)");
             WifiError::CredencialesInvalidas("password")
         })?,
@@ -112,7 +110,7 @@ pub fn connect_with_retry(
     configurar(&mut wifi)?;
 
     wifi.start().map_err(WifiError::ConnectionFailed)?;
-    log::info!("WiFi iniciado, conectando a '{}'...", SSID);
+    log::info!("WiFi iniciado, conectando a '{}'...", WIFI_SSID);
 
     match wifi.scan() {
         Ok(aps) => {

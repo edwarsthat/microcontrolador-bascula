@@ -1,7 +1,8 @@
 pub mod arranque;
 pub mod listo;
+pub mod semaforo;
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+use crate::config::VERSION_FIRMWARE as VERSION;
 
 /// Primera y segunda linea de toda pantalla.
 pub fn cabecera() -> [String; 2] {

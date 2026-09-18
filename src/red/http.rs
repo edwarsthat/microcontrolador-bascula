@@ -3,7 +3,8 @@ use esp_idf_svc::http::Method;
 use esp_idf_svc::sys::EspError;
 use std::time::Duration;
 
-const SERVER_URL: &str = env!("SERVER_URL");
+use crate::config::SERVER_URL;
+
 pub const RUTA_ARRANQUE: &str = "/dispositivos/arranque";
 const TIMEOUT: Duration = Duration::from_secs(10);
 
