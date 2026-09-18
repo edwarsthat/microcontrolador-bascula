@@ -1,5 +1,8 @@
 use embedded_graphics::{
-    mono_font::{ascii::FONT_6X10, MonoTextStyle},
+    mono_font::{
+        ascii::{FONT_10X20, FONT_6X10},
+        MonoTextStyle,
+    },
     pixelcolor::BinaryColor,
     prelude::*,
     text::{Baseline, Text},
@@ -12,8 +15,59 @@ const DIRECCION: u8 = 0x3C;
 /// Caracteres por linea y lineas por pantalla con FONT_6X10 en 128x64.
 pub const COLUMNAS: usize = 21;
 pub const FILAS: usize = 6;
-/// Alto de FONT_6X10, sin aire: 6 lineas x 10 px = 60 px, entran en los 64.
+/// Caracteres por linea con FONT_10X20: 128 / 10.
+pub const COLUMNAS_GRANDES: usize = 12;
+/// Alto util del display en pixeles.
+const ALTO: i32 = 64;
+/// Alto de cada fuente, sin aire.
 const LINEA: i32 = 10;
+const LINEA_GRANDE: i32 = 20;
+
+/// Tamano de letra de una linea. `Grande` ocupa dos filas normales.
+#[derive(Clone, Copy)]
+pub enum Tamano {
+    Normal,
+    Grande,
+}
+
+impl Tamano {
+    fn alto(self) -> i32 {
+        match self {
+            Tamano::Normal => LINEA,
+            Tamano::Grande => LINEA_GRANDE,
+        }
+    }
+
+    fn estilo(self) -> MonoTextStyle<'static, BinaryColor> {
+        match self {
+            Tamano::Normal => MonoTextStyle::new(&FONT_6X10, BinaryColor::On),
+            Tamano::Grande => MonoTextStyle::new(&FONT_10X20, BinaryColor::On),
+        }
+    }
+}
+
+/// Una linea de la vista: el texto y con que letra va.
+#[derive(Clone, Copy)]
+pub struct Linea<'a> {
+    pub texto: &'a str,
+    pub tamano: Tamano,
+}
+
+impl<'a> Linea<'a> {
+    pub fn normal(texto: &'a str) -> Self {
+        Self {
+            texto,
+            tamano: Tamano::Normal,
+        }
+    }
+
+    pub fn grande(texto: &'a str) -> Self {
+        Self {
+            texto,
+            tamano: Tamano::Grande,
+        }
+    }
+}
 
 type Display = Ssd1306<
     I2CInterface<I2cDriver<'static>>,
@@ -52,19 +106,36 @@ impl Pantalla {
         }
     }
 
-    /// Pantalla de texto: borra todo y escribe `lineas` de arriba a abajo.
-    /// Lo que pase de FILAS o de COLUMNAS se corta. Un solo flush al final.
-    pub fn texto(&mut self, lineas: &[&str]) {
+    /// Borra todo y escribe las lineas de arriba a abajo, avanzando segun el
+    /// alto de cada letra. La linea que no quepa entera se descarta, igual que
+    /// lo que se pase de COLUMNAS. Un solo flush al final.
+    pub fn dibujar(&mut self, lineas: &[Linea]) {
         let Some(d) = self.display.as_mut() else {
             return;
         };
-        let estilo = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
         d.clear_buffer();
-        for (i, linea) in lineas.iter().take(FILAS).enumerate() {
-            let punto = Point::new(0, i as i32 * LINEA);
-            let _ = Text::with_baseline(linea, punto, estilo, Baseline::Top).draw(d);
+        let mut y = 0;
+        for linea in lineas {
+            let alto = linea.tamano.alto();
+            if y + alto > ALTO {
+                break;
+            }
+            let punto = Point::new(0, y);
+            let _ = Text::with_baseline(linea.texto, punto, linea.tamano.estilo(), Baseline::Top)
+                .draw(d);
+            y += alto;
         }
         let _ = d.flush();
+    }
+
+    /// Pantalla de solo texto normal, el caso comun.
+    pub fn texto(&mut self, lineas: &[&str]) {
+        let mut vista = [Linea::normal(""); FILAS];
+        let usadas = lineas.len().min(FILAS);
+        for (destino, texto) in vista.iter_mut().zip(lineas) {
+            *destino = Linea::normal(texto);
+        }
+        self.dibujar(&vista[..usadas]);
     }
 }

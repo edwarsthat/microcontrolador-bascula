@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use crate::arranque::Sistema;
-use crate::ui;
 
 pub enum Fase {
     Reposo,
@@ -29,7 +28,8 @@ impl Pesaje {
         match &nueva {
             Fase::Reposo => {
                 sistema.semaforo.reposo();
-                ui::listo::mostrar(&mut sistema.pantalla, &sistema.device_id, sistema.en_linea);
+                // TODO: peso real cuando el UART sepa leer la bascula.
+                sistema.pantallas.espera(None, sistema.en_linea);
             }
         }
 

@@ -11,13 +11,32 @@ use crate::hardware::{
     bus_i2c::BusI2c, bus_uart::BusUart, lector_nfc::LectorNfc, pantalla::Pantalla,
 };
 use crate::red::{http::ClienteServidor, wifi::Wifi};
-use crate::ui::arranque::{Arranque, Estado};
+use crate::ui::pantallas::Pantallas;
 use crate::ui::semaforo::Semaforo;
 use crate::{config, hardware, mensajes, nvs, red};
 
+/// Estado de un paso del arranque, como se ve en pantalla.
+#[derive(Clone, Copy, PartialEq, Default)]
+pub enum Estado {
+    #[default]
+    Pendiente,
+    EnCurso,
+    Ok,
+    Fallo,
+}
+
+/// Progreso del arranque. `iniciar` lo actualiza paso a paso y lo manda a
+/// dibujar; como se ve cada estado lo decide `ui::pantallas`.
+#[derive(Clone, Copy, Default)]
+pub struct Arranque {
+    pub nfc: Estado,
+    pub wifi: Estado,
+    pub servidor: Estado,
+}
+
 /// Todo lo que el ciclo principal necesita, ya inicializado.
 pub struct Sistema {
-    pub pantalla: Pantalla,
+    pub pantallas: Pantallas,
     pub lector: LectorNfc,
     pub uart: Option<BusUart>,
     pub semaforo: Semaforo,
@@ -33,18 +52,18 @@ pub fn iniciar(
     sysloop: EspSystemEventLoop,
     nvs: EspDefaultNvsPartition,
 ) -> Sistema {
-    let mut pantalla = match BusI2c::new(
+    let mut pantallas = match BusI2c::new(
         peripherals.i2c0,
         peripherals.pins.gpio21,
         peripherals.pins.gpio22,
     ) {
         Ok(mut bus) => {
             bus.escanear();
-            Pantalla::new(Some(bus.into_driver()))
+            Pantallas::new(Pantalla::new(Some(bus.into_driver())))
         }
         Err(e) => {
             log::error!("I2C0 no inicializo: {e}. Se continua sin bus I2C");
-            Pantalla::new(None)
+            Pantallas::new(Pantalla::new(None))
         }
     };
 
@@ -52,7 +71,7 @@ pub fn iniciar(
         nfc: Estado::EnCurso,
         ..Default::default()
     };
-    arranque.mostrar(&mut pantalla);
+    pantallas.arranque(&arranque);
 
     let bus_spi = match hardware::bus_spi::BusSpi::new(
         peripherals.spi3,
@@ -109,14 +128,14 @@ pub fn iniciar(
     let semaforo = Semaforo::new(leds);
 
     arranque.wifi = Estado::EnCurso;
-    arranque.mostrar(&mut pantalla);
+    pantallas.arranque(&arranque);
 
     let wifi = match red::wifi::connect_with_retry(peripherals.modem, sysloop, nvs.clone()) {
         Ok(w) => w,
         Err(err) => {
             log::error!("No se pudo establecer conexion WiFi: {:?}", err);
             arranque.wifi = Estado::Fallo;
-            arranque.mostrar(&mut pantalla);
+            pantallas.arranque(&arranque);
             std::thread::sleep(Duration::from_secs(3));
             unsafe { esp_idf_svc::sys::esp_restart() };
         }
@@ -124,7 +143,7 @@ pub fn iniciar(
 
     arranque.wifi = Estado::Ok;
     arranque.servidor = Estado::EnCurso;
-    arranque.mostrar(&mut pantalla);
+    pantallas.arranque(&arranque);
 
     let mut cliente = match red::http::ClienteServidor::new() {
         Ok(c) => c,
@@ -157,11 +176,11 @@ pub fn iniciar(
             Estado::Fallo
         }
     };
-    arranque.mostrar(&mut pantalla);
+    pantallas.arranque(&arranque);
     std::thread::sleep(Duration::from_secs(2)); // que el resultado se alcance a leer
 
     Sistema {
-        pantalla,
+        pantallas,
         lector,
         uart,
         semaforo,
