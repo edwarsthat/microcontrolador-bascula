@@ -18,7 +18,7 @@ impl BusUart {
         rx: impl InputPin + 'static,
     ) -> Result<Self, EspError> {
         let cfg = Config::new()
-            .baudrate(9600.Hz())
+            .baudrate(1200.Hz())
             .data_bits(DataBits::DataBits8)
             .parity_none()
             .stop_bits(StopBits::STOP1);
@@ -94,4 +94,45 @@ impl BusUart {
             log::warn!("UART: la bascula no mando nada en {segundos}s");
         }
     }
+
+    /// Manda comandos tipicos de "pedir peso" y muestra si la bascula responde.
+pub fn sondear(&self) {
+    const COMANDOS: &[&[u8]] = &[
+        b"\x05", // ENQ
+        b"R",
+        b"R\r\n",
+        b"W\r\n",
+        b"P\r\n",
+        b"S\r\n",
+        b"SI\r\n",
+        b"Q\r\n",
+        b"\r\n",
+    ];
+    let mut buf = [0u8; 128];
+    let timeout = TickType::new_millis(500).ticks();
+    for baud in [9600u32, 4800, 2400, 1200, 19200] {
+        if let Err(e) = self.driver.change_baudrate(baud.Hz()) {
+            log::error!("UART: no pude cambiar a {baud}: {e}");
+            continue;
+        }
+        log::info!("UART: --- probando a {baud} baudios ---");
+        for cmd in COMANDOS {
+            let _ = self.driver.clear_rx();
+            if let Err(e) = self.driver.write(cmd) {
+                log::error!("UART: fallo al escribir: {e}");
+                continue;
+            }
+            match self.driver.read(&mut buf, timeout) {
+                Ok(n) if n > 0 => log::info!(
+                    "UART: {:?} -> RESPONDIO {n} bytes | {} | {}",
+                    String::from_utf8_lossy(cmd),
+                    hex::encode(&buf[..n]),
+                    String::from_utf8_lossy(&buf[..n])
+                ),
+                _ => log::info!("UART: {:?} -> sin respuesta", String::from_utf8_lossy(cmd)),
+            }
+        }
+    }
+    let _ = self.driver.change_baudrate(9600.Hz());
+}
 }

@@ -1,0 +1,12 @@
+Script started on Fri Oct  2 10:56:22 2026
+Command: espflash monitor
+[90m[[0m2026-10-02T15:56:23Z [32mINFO [0m[90m][0m Serial port: '/dev/cu.usbserial-0001'
+[90m[[0m2026-10-02T15:56:23Z [32mINFO [0m[90m][0m Connecting...
+[90m[[0m2026-10-02T15:56:29Z [32mINFO [0m[90m][0m Using flash stub
+Commands:
+    CTRL+R    Reset chip
+    CTRL+C    Exit
+
+
+Command exit status: 0
+Script done on Fri Oct  2 10:57:09 2026
