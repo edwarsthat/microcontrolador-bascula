@@ -1,3 +1,4 @@
+pub mod bascula;
 pub mod bus_i2c;
 pub mod bus_spi;
 pub mod bus_uart;

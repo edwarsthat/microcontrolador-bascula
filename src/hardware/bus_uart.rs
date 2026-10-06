@@ -10,7 +10,7 @@ pub struct BusUart {
 }
 
 impl BusUart {
-    /// TX=GPIO17, RX=GPIO16. 9600 8N1: lo que traen casi todas las basculas
+    /// TX=GPIO17, RX=GPIO16. 1200 8N1: lo que traen casi todas las basculas
     /// de fabrica. Sin control de flujo: el MAX3232 solo tiene TX/RX.
     pub fn new<UART: Uart + 'static>(
         uart: UART,
@@ -31,6 +31,15 @@ impl BusUart {
             &cfg,
         )?;
         Ok(Self { driver })
+    }
+
+    pub fn descartar_rx(&self) {
+        let _ = self.driver.clear_rx();
+    }
+
+    pub fn leer(&self, buf: &mut [u8], timeout_ms: u64) -> usize {
+        let ticks = TickType::new_millis(timeout_ms).ticks();
+        self.driver.read(buf, ticks).unwrap_or(0)
     }
 
     /// Prueba de lazo: manda `msg` y espera recibirlo de vuelta.
@@ -96,43 +105,36 @@ impl BusUart {
     }
 
     /// Manda comandos tipicos de "pedir peso" y muestra si la bascula responde.
-pub fn sondear(&self) {
-    const COMANDOS: &[&[u8]] = &[
-        b"\x05", // ENQ
-        b"R",
-        b"R\r\n",
-        b"W\r\n",
-        b"P\r\n",
-        b"S\r\n",
-        b"SI\r\n",
-        b"Q\r\n",
-        b"\r\n",
-    ];
-    let mut buf = [0u8; 128];
-    let timeout = TickType::new_millis(500).ticks();
-    for baud in [9600u32, 4800, 2400, 1200, 19200] {
-        if let Err(e) = self.driver.change_baudrate(baud.Hz()) {
-            log::error!("UART: no pude cambiar a {baud}: {e}");
-            continue;
-        }
-        log::info!("UART: --- probando a {baud} baudios ---");
-        for cmd in COMANDOS {
-            let _ = self.driver.clear_rx();
-            if let Err(e) = self.driver.write(cmd) {
-                log::error!("UART: fallo al escribir: {e}");
+    pub fn sondear(&self) {
+        const COMANDOS: &[&[u8]] = &[
+            b"\x05", // ENQ
+            b"R", b"R\r\n", b"W\r\n", b"P\r\n", b"S\r\n", b"SI\r\n", b"Q\r\n", b"\r\n",
+        ];
+        let mut buf = [0u8; 128];
+        let timeout = TickType::new_millis(500).ticks();
+        for baud in [9600u32, 4800, 2400, 1200, 19200] {
+            if let Err(e) = self.driver.change_baudrate(baud.Hz()) {
+                log::error!("UART: no pude cambiar a {baud}: {e}");
                 continue;
             }
-            match self.driver.read(&mut buf, timeout) {
-                Ok(n) if n > 0 => log::info!(
-                    "UART: {:?} -> RESPONDIO {n} bytes | {} | {}",
-                    String::from_utf8_lossy(cmd),
-                    hex::encode(&buf[..n]),
-                    String::from_utf8_lossy(&buf[..n])
-                ),
-                _ => log::info!("UART: {:?} -> sin respuesta", String::from_utf8_lossy(cmd)),
+            log::info!("UART: --- probando a {baud} baudios ---");
+            for cmd in COMANDOS {
+                let _ = self.driver.clear_rx();
+                if let Err(e) = self.driver.write(cmd) {
+                    log::error!("UART: fallo al escribir: {e}");
+                    continue;
+                }
+                match self.driver.read(&mut buf, timeout) {
+                    Ok(n) if n > 0 => log::info!(
+                        "UART: {:?} -> RESPONDIO {n} bytes | {} | {}",
+                        String::from_utf8_lossy(cmd),
+                        hex::encode(&buf[..n]),
+                        String::from_utf8_lossy(&buf[..n])
+                    ),
+                    _ => log::info!("UART: {:?} -> sin respuesta", String::from_utf8_lossy(cmd)),
+                }
             }
         }
+        let _ = self.driver.change_baudrate(9600.Hz());
     }
-    let _ = self.driver.change_baudrate(9600.Hz());
-}
 }

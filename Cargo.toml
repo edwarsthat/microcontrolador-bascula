@@ -21,6 +21,11 @@ esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys.git" }
 esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal.git" }
 esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc.git" }
 
+[features]
+# Usa una bascula falsa (src/hardware/bascula/mock.rs) en vez de la UART.
+bascula-mock = []
+
+
 [dependencies]
 log = "0.4"
 esp-idf-svc = { version = "0.53", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }

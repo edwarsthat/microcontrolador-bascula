@@ -7,6 +7,7 @@ use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use esp_idf_svc::wifi::WifiDeviceId;
 use std::time::Duration;
 
+use crate::hardware::bascula::FuenteBascula;
 use crate::hardware::{
     bus_i2c::BusI2c, bus_uart::BusUart, lector_nfc::LectorNfc, pantalla::Pantalla,
 };
@@ -38,7 +39,8 @@ pub struct Arranque {
 pub struct Sistema {
     pub pantallas: Pantallas,
     pub lector: LectorNfc,
-    pub uart: Option<BusUart>,
+    /// Real o mock segun el feature `bascula-mock`; `Pesaje` no distingue.
+    pub bascula: Box<dyn FuenteBascula>,
     pub semaforo: Semaforo,
     pub wifi: Wifi,
     pub cliente: ClienteServidor,
@@ -94,21 +96,25 @@ pub fn iniciar(
         Estado::Fallo
     };
 
-    let uart = match hardware::bus_uart::BusUart::new(
+    #[cfg(feature = "bascula-mock")]
+    let bascula: Box<dyn FuenteBascula> = {
+        log::warn!("Bascula: usando MOCK, no se lee la UART");
+        Box::new(hardware::bascula::BasculaMock::new())
+    };
+
+    #[cfg(not(feature = "bascula-mock"))]
+    let bascula: Box<dyn FuenteBascula> = match BusUart::new(
         peripherals.uart2,
         peripherals.pins.gpio17,
         peripherals.pins.gpio16,
     ) {
-        Ok(u) => Some(u),
+        Ok(u) => Box::new(hardware::bascula::BasculaUart::new(u)),
         Err(e) => {
-            log::error!("UART2 no inicializo: {e}");
-            None
+            log::error!("UART2 no inicializo: {e}. Reiniciando");
+            std::thread::sleep(Duration::from_secs(3));
+            unsafe { esp_idf_svc::sys::esp_restart() };
         }
     };
-    if let Some(u) = &uart {
-        u.loopback(b"hola bascula\r\n"); // etapas 1 y 2
-                                         // u.espiar(10);               // etapa 3: descomenta cuando conectes la bascula
-    }
 
     let mut leds = match hardware::leds::Leds::new(
         peripherals.pins.gpio25,
@@ -182,7 +188,7 @@ pub fn iniciar(
     Sistema {
         pantallas,
         lector,
-        uart,
+        bascula,
         semaforo,
         wifi,
         cliente,

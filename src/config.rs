@@ -10,6 +10,12 @@ pub const SERVER_URL: &str = env!("SERVER_URL");
 pub const VERSION_FIRMWARE: &str = env!("CARGO_PKG_VERSION");
 
 /// Peso a partir del cual se considera que hay canasta puesta.
-pub const PESO_MINIMO_KG: f32 = 10.0;
+pub const PESO_MINIMO_KG: f32 = 5.0;
 /// Tiempo minimo entre dos pesajes de la misma tarjeta.
 pub const TARJETA_ESPERA: Duration = Duration::from_secs(10 * 60);
+
+/// Sin ninguna trama valida en este tiempo, la bascula se da por desconectada.
+/// Manda una cada ~200 ms, asi que 1 s son ~5 tramas perdidas.
+pub const TIMEOUT_BASCULA: Duration = Duration::from_secs(1);
+/// Con canasta estable, cuanto se espera la tarjeta antes de volver a esperar peso.
+pub const TIMEOUT_TARJETA: Duration = Duration::from_secs(30);

@@ -81,6 +81,21 @@ impl Pantallas {
             Linea::normal(&estado),
         ]);
     }
+
+        /// Hay canasta estable: se espera la tarjeta. El peso queda fijo, es el
+    /// que se va a registrar:
+    ///
+    ///   AgroFenix     v0.1.0
+    ///   --------------------
+    ///     22.0 kg
+    ///    pase la tarjeta
+    pub fn tarjeta(&mut self, kg: f32) {
+        let peso = centrar(&format!("{kg:>6.1} kg"), COLUMNAS_GRANDES);
+        let aviso = centrar("pase la tarjeta", COLUMNAS);
+
+        self.pintar(&[Linea::grande(&peso), Linea::normal(&aviso)]);
+    }
+
 }
 
 /// Como se ve cada estado del arranque al lado de su etiqueta.

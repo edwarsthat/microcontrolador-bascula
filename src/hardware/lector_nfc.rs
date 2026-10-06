@@ -85,6 +85,7 @@ impl LectorNfc {
             }
         }
         self.ultimo = Some((uid.clone(), ahora));
+        log::info!("NFC: tarjeta {uid}");
         Some(uid)
     }
 
