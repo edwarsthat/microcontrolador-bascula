@@ -1,6 +1,7 @@
 use crate::hardware::leds::Leds;
 
 const AZUL: usize = 0;
+#[expect(dead_code, reason = "solo lo usan `enviando` y `pendiente`")]
 const AMARILLO: usize = 1;
 const VERDE: usize = 2;
 const ROJO: usize = 3;
@@ -31,12 +32,14 @@ impl Semaforo {
     pub fn canasta(&mut self) {
         self.solo(&[AZUL])
     }
+    #[expect(dead_code, reason = "estado de envio en LEDs, pendiente de decidir")]
     pub fn enviando(&mut self) {
         self.solo(&[AMARILLO])
     }
     pub fn confirmado(&mut self) {
         self.solo(&[VERDE])
     }
+    #[expect(dead_code, reason = "estado de envio en LEDs, pendiente de decidir")]
     pub fn pendiente(&mut self) {
         self.solo(&[VERDE, AMARILLO])
     }

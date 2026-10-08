@@ -1,9 +1,12 @@
+// Solo se compila la fuente que se usa: el mock con el feature, la UART sin el.
 #[cfg(feature = "bascula-mock")]
 mod mock;
+#[cfg(not(feature = "bascula-mock"))]
 mod uart;
 
 #[cfg(feature = "bascula-mock")]
 pub use mock::BasculaMock;
+#[cfg(not(feature = "bascula-mock"))]
 pub use uart::BasculaUart;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

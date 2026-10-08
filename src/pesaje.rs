@@ -181,7 +181,11 @@ fn verificar_peso(peso_1: f32, sistema: &mut Sistema) -> Verificacion {
 fn mostrar_resultado(uid: &str, resultado: Verificacion, sistema: &mut Sistema) -> bool {
     let guardado = match resultado {
         Verificacion::Igual { peso_kg } => {
-            match sistema.registros.registrar(uid, peso_kg, sistema.sesion) {
+            let guardado = sistema
+                .registros
+                .con(|r| r.registrar(uid, peso_kg, sistema.sesion));
+
+            match guardado {
                 Ok(r) => {
                     log::info!("Pesaje #{}: tarjeta {uid}, {peso_kg:.2} kg", r.transaccion);
                     sistema.semaforo.confirmado();

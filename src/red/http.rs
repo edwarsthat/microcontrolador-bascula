@@ -6,6 +6,7 @@ use std::time::Duration;
 use crate::config::SERVER_URL;
 
 pub const RUTA_ARRANQUE: &str = "/dispositivos/arranque";
+pub const RUTA_PESAJES: &str = "/dispositivos/pesajes";
 const TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]

@@ -8,10 +8,7 @@ use esp_idf_svc::wifi::WifiDeviceId;
 use std::time::Duration;
 
 use crate::hardware::bascula::FuenteBascula;
-use crate::hardware::{
-    bus_i2c::BusI2c, bus_uart::BusUart, lector_nfc::LectorNfc, pantalla::Pantalla,
-};
-use crate::red::{http::ClienteServidor, wifi::Wifi};
+use crate::hardware::{bus_i2c::BusI2c, lector_nfc::LectorNfc, pantalla::Pantalla};
 use crate::ui::pantallas::Pantallas;
 use crate::ui::semaforo::Semaforo;
 use crate::{config, hardware, mensajes, nvs, red};
@@ -42,13 +39,10 @@ pub struct Sistema {
     /// Real o mock segun el feature `bascula-mock`; `Pesaje` no distingue.
     pub bascula: Box<dyn FuenteBascula>,
     pub semaforo: Semaforo,
-    pub wifi: Wifi,
-    pub cliente: ClienteServidor,
-    pub device_id: String,
     /// El servidor respondio al arranque.
     pub en_linea: bool,
-    /// Pesajes guardados en flash, con su contador de transacciones.
-    pub registros: crate::registros::Registros,
+    /// Compartido con el hilo de envio: hay que pedir el candado con `.lock()`.
+    pub registros: crate::registros::Compartidos,
     /// Numero de arranque; con el tiempo monotonico fecha los pesajes.
     pub sesion: i64,
 }
@@ -107,7 +101,7 @@ pub fn iniciar(
     };
 
     #[cfg(not(feature = "bascula-mock"))]
-    let bascula: Box<dyn FuenteBascula> = match BusUart::new(
+    let bascula: Box<dyn FuenteBascula> = match hardware::bus_uart::BusUart::new(
         peripherals.uart2,
         peripherals.pins.gpio17,
         peripherals.pins.gpio16,
@@ -176,6 +170,7 @@ pub fn iniciar(
         "Sesion de arranque {sesion}, proxima transaccion {}",
         registros.transaccion_actual()
     );
+    let registros = crate::registros::Compartidos::new(registros);
 
     let mac = wifi.wifi().get_mac(WifiDeviceId::Sta).unwrap_or([0; 6]);
 
@@ -202,14 +197,13 @@ pub fn iniciar(
     pantallas.arranque(&arranque);
     std::thread::sleep(Duration::from_secs(2)); // que el resultado se alcance a leer
 
+    crate::envio::lanzar(registros.clone(), wifi, msg.device_id);
+
     Sistema {
         pantallas,
         lector,
         bascula,
         semaforo,
-        wifi,
-        cliente,
-        device_id: msg.device_id,
         en_linea: arranque.servidor == Estado::Ok,
         registros,
         sesion,

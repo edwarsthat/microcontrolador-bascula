@@ -4,6 +4,7 @@ use esp_idf_svc::nvs::EspDefaultNvsPartition;
 
 mod arranque;
 mod config;
+mod envio;
 mod hardware;
 mod mensajes;
 mod nvs;

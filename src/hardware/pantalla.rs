@@ -128,14 +128,4 @@ impl Pantalla {
         }
         let _ = d.flush();
     }
-
-    /// Pantalla de solo texto normal, el caso comun.
-    pub fn texto(&mut self, lineas: &[&str]) {
-        let mut vista = [Linea::normal(""); FILAS];
-        let usadas = lineas.len().min(FILAS);
-        for (destino, texto) in vista.iter_mut().zip(lineas) {
-            *destino = Linea::normal(texto);
-        }
-        self.dibujar(&vista[..usadas]);
-    }
 }

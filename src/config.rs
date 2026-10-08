@@ -2,6 +2,7 @@ use std::time::Duration;
 
 pub const WIFI_SSID: &str = include_str!(concat!(env!("OUT_DIR"), "/WIFI_SSID"));
 pub const WIFI_PASSWORD: &str = include_str!(concat!(env!("OUT_DIR"), "/WIFI_PASSWORD"));
+#[expect(dead_code, reason = "autenticacion con el servidor, pendiente de definir")]
 pub const API_KEY: &str = include_str!(concat!(env!("OUT_DIR"), "/API_KEY"));
 
 /// Una URL no lleva espacios al borde, asi que `env!` directo sirve.
@@ -16,6 +17,7 @@ pub const TARJETA_ESPERA: Duration = Duration::from_secs(10 * 60);
 
 /// Sin ninguna trama valida en este tiempo, la bascula se da por desconectada.
 /// Manda una cada ~200 ms, asi que 1 s son ~5 tramas perdidas.
+#[cfg(not(feature = "bascula-mock"))]
 pub const TIMEOUT_BASCULA: Duration = Duration::from_secs(1);
 /// Con canasta estable, cuanto se espera la tarjeta antes de volver a esperar peso.
 pub const TIMEOUT_TARJETA: Duration = Duration::from_secs(30);
