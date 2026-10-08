@@ -4,4 +4,4 @@ otadata,    data, ota,     0xf000,   8K
 phy_init,   data, phy,     0x11000,  4K
 ota_0,      app,  ota_0,   0x20000,  1792K
 ota_1,      app,  ota_1,   ,         1792K
-storage,    data, undefined,    ,         128K
+registros,    data, nvs,    ,         128K

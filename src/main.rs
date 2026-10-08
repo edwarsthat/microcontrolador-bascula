@@ -9,6 +9,7 @@ mod mensajes;
 mod nvs;
 mod pesaje;
 mod red;
+mod registros;
 mod ui;
 
 fn main() {

@@ -82,7 +82,7 @@ impl Pantallas {
         ]);
     }
 
-        /// Hay canasta estable: se espera la tarjeta. El peso queda fijo, es el
+    /// Hay canasta estable: se espera la tarjeta. El peso queda fijo, es el
     /// que se va a registrar:
     ///
     ///   AgroFenix     v0.1.0
@@ -96,6 +96,35 @@ impl Pantallas {
         self.pintar(&[Linea::grande(&peso), Linea::normal(&aviso)]);
     }
 
+    /// Resultado de un pesaje, una linea grande y una de detalle:
+    ///
+    ///   AgroFenix     v0.1.0
+    ///   --------------------
+    ///      ERROR
+    ///    el peso cambio
+    pub fn aviso(&mut self, titulo: &str, detalle: &str) {
+        let titulo = centrar(titulo, COLUMNAS_GRANDES);
+        let detalle = centrar(detalle, COLUMNAS);
+
+        self.pintar(&[Linea::grande(&titulo), Linea::normal(&detalle)]);
+    }
+
+    /// Despues de un pesaje: muestra el peso en vivo hasta que retiren la canasta:
+    ///
+    ///   AgroFenix     v0.1.0
+    ///   --------------------
+    ///     22.0 kg
+    ///   retire la canasta
+    pub fn retiro(&mut self, kg: Option<f32>) {
+        let peso = match kg {
+            Some(kg) => format!("{kg:>6.1} kg"),
+            None => "  ---- kg".to_string(),
+        };
+        let peso = centrar(&peso, COLUMNAS_GRANDES);
+        let aviso = centrar("retire la canasta", COLUMNAS);
+
+        self.pintar(&[Linea::grande(&peso), Linea::normal(&aviso)]);
+    }
 }
 
 /// Como se ve cada estado del arranque al lado de su etiqueta.

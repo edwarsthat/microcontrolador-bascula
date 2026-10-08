@@ -6,6 +6,11 @@ linker = "ldproxy"
 runner = "espflash flash --monitor --partition-table partitions.csv"
 rustflags = [ "--cfg",  "espidf_time64"]
 
+[alias]
+# Atajos tipo "npm run": `cargo mock` en vez de `cargo run --features bascula-mock`.
+mock = "run --features bascula-mock"
+mock-build = "build --features bascula-mock"
+
 [unstable]
 build-std = ["std", "panic_abort"]
 

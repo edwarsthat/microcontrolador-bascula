@@ -10,17 +10,35 @@ struct Tramo {
     estable: bool,
 }
 
-/// Un pesaje: vacia, ponen la canasta, queda estable 30 s (tiempo para pasar
-/// la tarjeta) y la retiran.
+/// Un pesaje: vacia, ponen la canasta, queda estable 20 s (tiempo para pasar
+/// la tarjeta) y la retiran de golpe. Ciclo de 30 s.
 const GUION: &[Tramo] = &[
-    Tramo { hasta_ms: 5_000,  peso_kg: 0.00,  estable: true  }, // vacia
-    Tramo { hasta_ms: 6_000,  peso_kg: 14.50, estable: false }, // poniendo la canasta
-    Tramo { hasta_ms: 7_000,  peso_kg: 21.85, estable: false },
-    Tramo { hasta_ms: 37_000, peso_kg: 22.00, estable: true  }, // estable: pasar la tarjeta
-    Tramo { hasta_ms: 39_000, peso_kg: 6.00,  estable: false }, // retirando
-    Tramo { hasta_ms: 45_000, peso_kg: 0.00,  estable: true  },
+    Tramo {
+        hasta_ms: 5_000,
+        peso_kg: 0.00,
+        estable: true,
+    }, // vacia
+    Tramo {
+        hasta_ms: 6_000,
+        peso_kg: 14.50,
+        estable: false,
+    }, // poniendo la canasta
+    Tramo {
+        hasta_ms: 7_000,
+        peso_kg: 21.85,
+        estable: false,
+    },
+    Tramo {
+        hasta_ms: 27_000,
+        peso_kg: 22.00,
+        estable: true,
+    }, // estable 20 s: pasar la tarjeta
+    Tramo {
+        hasta_ms: 30_000,
+        peso_kg: 0.00,
+        estable: true,
+    }, // retirada
 ];
-
 
 pub struct BasculaMock {
     /// Se fija en el primer `leer()`, no al crearlo: asi el guion empieza

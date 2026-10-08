@@ -19,3 +19,11 @@ pub const TARJETA_ESPERA: Duration = Duration::from_secs(10 * 60);
 pub const TIMEOUT_BASCULA: Duration = Duration::from_secs(1);
 /// Con canasta estable, cuanto se espera la tarjeta antes de volver a esperar peso.
 pub const TIMEOUT_TARJETA: Duration = Duration::from_secs(30);
+/// Diferencia maxima entre el peso antes y despues de la tarjeta para darlo por igual.
+/// La bascula oscila de a 0.05 kg (capturas/04_peso_alto), asi que dos pasos.
+pub const TOLERANCIA_KG: f32 = 0.5;
+/// Despues de la tarjeta, cuanto se espera una lectura estable para comparar.
+pub const TIMEOUT_VERIFICACION: Duration = Duration::from_secs(3);
+/// Debajo de este peso, estable, se da la canasta por retirada. No es 0.00 exacto
+/// porque tierra u hojas en el plato dejan la bascula marcando algo.
+pub const PESO_CERO_KG: f32 = 1.0;

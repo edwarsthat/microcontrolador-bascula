@@ -47,6 +47,10 @@ pub struct Sistema {
     pub device_id: String,
     /// El servidor respondio al arranque.
     pub en_linea: bool,
+    /// Pesajes guardados en flash, con su contador de transacciones.
+    pub registros: crate::registros::Registros,
+    /// Numero de arranque; con el tiempo monotonico fecha los pesajes.
+    pub sesion: i64,
 }
 
 pub fn iniciar(
@@ -160,6 +164,19 @@ pub fn iniciar(
     };
 
     let sesion = nvs::siguiente_sesion(nvs.clone()).unwrap_or(0);
+    let registros = match crate::registros::Registros::abrir() {
+        Ok(r) => r,
+        Err(e) => {
+            log::error!("Particion de registros no abrio: {e}. Reiniciando");
+            std::thread::sleep(Duration::from_secs(3));
+            unsafe { esp_idf_svc::sys::esp_restart() };
+        }
+    };
+    log::info!(
+        "Sesion de arranque {sesion}, proxima transaccion {}",
+        registros.transaccion_actual()
+    );
+
     let mac = wifi.wifi().get_mac(WifiDeviceId::Sta).unwrap_or([0; 6]);
 
     let msg = mensajes::Arranque {
@@ -194,5 +211,7 @@ pub fn iniciar(
         cliente,
         device_id: msg.device_id,
         en_linea: arranque.servidor == Estado::Ok,
+        registros,
+        sesion,
     }
 }
