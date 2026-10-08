@@ -2,6 +2,11 @@ use esp_idf_svc::http::client::{Configuration as HttpConfiguration, EspHttpConne
 use esp_idf_svc::http::Method;
 use esp_idf_svc::sys::EspError;
 use std::time::Duration;
+use hmac::{Hmac, KeyInit, Mac};
+use sha2::Sha256;
+use crate::config::API_KEY;
+
+type HmacSha256 = Hmac<Sha256>;
 
 use crate::config::SERVER_URL;
 
@@ -11,6 +16,8 @@ const TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]
 pub enum HttpError {
+     /// La API_KEY no sirve como clave HMAC.
+    Clave,
     /// No se pudo crear la conexión (memoria, config inválida).
     Init(EspError),
     /// Falló al abrir el socket o escribir: casi siempre problema de red.
@@ -23,26 +30,35 @@ pub enum HttpError {
 
 pub struct ClienteServidor {
     conn: EspHttpConnection,
+    firma: HmacSha256,
 }
 
 impl ClienteServidor {
     pub fn new() -> Result<Self, HttpError> {
+             let firma = HmacSha256::new_from_slice(API_KEY.as_bytes())
+            .map_err(|_| HttpError::Clave)?;
         let conn = EspHttpConnection::new(&HttpConfiguration {
             timeout: Some(TIMEOUT),
             ..Default::default()
         })
         .map_err(HttpError::Init)?;
 
+
         log::info!("Cliente HTTP listo, servidor: {}", SERVER_URL);
-        Ok(Self { conn })
+        Ok(Self { conn, firma })
     }
 
     pub fn post_json(&mut self, ruta: &str, body: &str) -> Result<u16, HttpError> {
         let url = format!("{}{}", SERVER_URL, ruta);
         let content_length = body.len().to_string();
+        let mut mac = self.firma.clone();
+        mac.update(body.as_bytes());
+        let firma = hex::encode(mac.finalize().into_bytes());
+
         let headers = [
             ("Content-Type", "application/json"),
             ("Content-Length", &content_length),
+            ("X-Firma", &firma),
         ];
 
         log::info!("POST {} ({} bytes)", url, body.len());
@@ -97,10 +113,12 @@ impl ClienteServidor {
 impl std::fmt::Display for HttpError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            HttpError::Clave => write!(f, "la API_KEY no sirve como clave HMAC"),
             HttpError::Init(e) => write!(f, "fallo al crear el cliente HTTP: {}", e),
             HttpError::Envio(e) => write!(f, "fallo al enviar la petición: {}", e),
             HttpError::Respuesta(e) => write!(f, "fallo al leer la respuesta: {}", e),
             HttpError::Servidor(s) => write!(f, "el servidor respondió {}", s),
         }
+
     }
 }

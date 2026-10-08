@@ -2,7 +2,6 @@ use std::time::Duration;
 
 pub const WIFI_SSID: &str = include_str!(concat!(env!("OUT_DIR"), "/WIFI_SSID"));
 pub const WIFI_PASSWORD: &str = include_str!(concat!(env!("OUT_DIR"), "/WIFI_PASSWORD"));
-#[expect(dead_code, reason = "autenticacion con el servidor, pendiente de definir")]
 pub const API_KEY: &str = include_str!(concat!(env!("OUT_DIR"), "/API_KEY"));
 
 /// Una URL no lleva espacios al borde, asi que `env!` directo sirve.
@@ -29,3 +28,5 @@ pub const TIMEOUT_VERIFICACION: Duration = Duration::from_secs(3);
 /// Debajo de este peso, estable, se da la canasta por retirada. No es 0.00 exacto
 /// porque tierra u hojas en el plato dejan la bascula marcando algo.
 pub const PESO_CERO_KG: f32 = 1.0;
+
+
